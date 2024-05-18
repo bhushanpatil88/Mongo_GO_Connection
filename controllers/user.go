@@ -41,6 +41,7 @@ func init(){
 	fmt.Println("Collection reference is ready")
 }
 
+// Create
 func insertOne(user models.User){
 	inserted, err := collection.InsertOne(context.Background(), user)
 
@@ -51,31 +52,9 @@ func insertOne(user models.User){
 	fmt.Println("Inserted data with id: ", inserted.InsertedID)
 }
 
-func updateOne(id string){
-	oid, _ := primitive.ObjectIDFromHex(id)
-	filter := bson.M{"_id":oid}
-	update := bson.M{"$set":bson.M{"age":100}}
-
-	_, err := collection.UpdateOne(context.Background(), filter, update)
-
-	if err != nil{
-		log.Fatal(err)
-	}
-}
-
-func deleteOne(id string){
-	oid, _ := primitive.ObjectIDFromHex(id)
-	filter := bson.M{"_id":oid}
-	
-	_, err := collection.DeleteOne(context.Background(), filter)
-	
-	if err != nil{
-		log.Fatal(err)
-	}
-}
-
+// Read
 func getAllUsers() [] models.User{
-	cur, err := collection.Find(context.Background(), primitive.M{})
+	cur, err := collection.Find(context.Background(), bson.M{})
 
 	if err != nil{
 		log.Fatal(err)
@@ -91,10 +70,57 @@ func getAllUsers() [] models.User{
 		}
 		users = append(users, user)
 	}
-
 	defer cur.Close(context.Background())
 
 	return users
+}
+
+func getUserById(id string) models.User{
+	oid, _ := primitive.ObjectIDFromHex(id)
+
+	result := collection.FindOne(context.Background(), primitive.M{"_id":oid})
+	user := models.User{}
+
+	err := result.Decode(&user)
+
+	if err != nil{
+		log.Fatal(err)
+	}
+
+	return user
+}
+
+// Update
+func updateOne(id string){
+	oid, _ := primitive.ObjectIDFromHex(id)
+	filter := bson.M{"_id":oid}
+	update := bson.M{"$set":bson.M{"age":100}}
+
+	_, err := collection.UpdateOne(context.Background(), filter, update)
+
+	if err != nil{
+		log.Fatal(err)
+	}
+}
+
+// Delete
+func deleteOne(id string){
+	oid, _ := primitive.ObjectIDFromHex(id)
+	filter := bson.M{"_id":oid}
+	
+	_, err := collection.DeleteOne(context.Background(), filter)
+	
+	if err != nil{
+		log.Fatal(err)
+	}
+}
+
+func GetUserById(w http.ResponseWriter, r *http.Request){
+	w.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(r)
+	user := getUserById(params["id"])
+
+	json.NewEncoder(w).Encode(user)
 }
 
 func GetAllUsers(w http.ResponseWriter, r *http.Request){
@@ -130,3 +156,6 @@ func UpdateUser(w http.ResponseWriter, r *http.Request){
 	updateOne(params["id"])
 	json.NewEncoder(w).Encode(params["id"])
 }
+
+
+
